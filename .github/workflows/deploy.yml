@@ -1,0 +1,32 @@
+name: Update Holiday API Data
+
+on:
+  schedule:
+    - cron: '0 0 1 * *' # 매달 1일 자정(UTC)에 자동 실행
+  push:
+    branches: [ main ] # 코드를 push할 때도 실행
+  workflow_dispatch:   # GitHub 웹에서 수동으로 실행 가능하게 함
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.1'
+
+      - name: Fetch API Data
+        env:
+          HOLIDAY_API_KEY: ${{ secrets.HOLIDAY_API_KEY }}
+        run: php fetch_holidays.php
+
+      - name: Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./
+          publish_branch: gh-pages # gh-pages 브랜치로 파일 전송
