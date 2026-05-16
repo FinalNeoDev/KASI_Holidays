@@ -1,10 +1,11 @@
+
 name: Update Holiday API Data
 
 on:
   schedule:
     - cron: '0 0 1 * *' # 매달 1일 자정(UTC)에 자동 실행
   push:
-    branches: [ main ] # 코드를 push할 때도 실행
+    branches: [ main ] # 메인 브랜치에 코드를 push할 때 실행
   workflow_dispatch:   # GitHub 웹에서 수동으로 실행 가능하게 함
 
 jobs:
@@ -19,14 +20,23 @@ jobs:
         with:
           php-version: '8.1'
 
-      - name: Fetch API Data
+      - name: Fetch API Data and Prepare Public Folder
         env:
           HOLIDAY_API_KEY: ${{ secrets.HOLIDAY_API_KEY }}
-        run: php fetch_holidays.php
+        run: |
+          # 1. PHP 스크립트 실행 (holidays.json 데이터 생성)
+          php fetch_holidays.php
+
+          # 2. 배포 결과물만 담을 임시 폴더(public) 생성
+          mkdir public
+
+          # 3. 서비스에 노출할 파일만 public 폴더로 이동 및 복사
+          mv holidays.json public/
+          cp index.html public/
 
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v3
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./
-          publish_branch: gh-pages # gh-pages 브랜치로 파일 전송
+          publish_dir: ./public  # 전체 폴더가 아닌 public 폴더 안의 내용만 배포
+          publish_branch: gh-pages
