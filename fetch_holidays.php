@@ -1,7 +1,6 @@
 <?php
 // fetch_holidays.php
 
-// GitHub Actions에서 주입해주는 환경 변수
 $apiKey = getenv('HOLIDAY_API_KEY');
 
 if (!$apiKey) {
@@ -9,52 +8,53 @@ if (!$apiKey) {
     exit(1);
 }
 
-$year = date('Y');
+// 기준 연도 설정
+$currentYear = (int)date('Y');
+$yearsToFetch = [$currentYear - 1, $currentYear, $currentYear + 1]; // [작년, 올해, 내년]
+
 $allHolidays = [];
 
-echo "[$year] 연도 공휴일 데이터 수집 시작...\n";
+echo "=== 3개년 공휴일 데이터 수집 시작 ===\n";
 
-for ($month = 1; $month <= 12; $month++) {
-    $m = str_pad($month, 2, "0", STR_PAD_LEFT);
+foreach ($yearsToFetch as $year) {
+    echo "\n> [${year}년] 데이터 수집 중...\n";
     
-    // 한국천문연구원 특일 정보 엔드포인트
-    $url = "http://apis.data.go.kr/B090041/openapi/service/SpcdeInfoService/getRestDeInfo";
-    
-    // 파라미터 설정 (인코딩된 키는 http_build_query 시 주의가 필요하여 직접 붙임)
-    $params = [
-        'solYear'  => $year,
-        'solMonth' => $m,
-        '_type'    => 'json',
-        'numOfRows' => 100
-    ];
+    for ($month = 1; $month <= 12; $month++) {
+        $m = str_pad($month, 2, "0", STR_PAD_LEFT);
+        
+        $url = "http://apis.data.go.kr/B090041/openapi/service/SpcdeInfoService/getRestDeInfo";
+        $params = [
+            'solYear'  => $year,
+            'solMonth' => $m,
+            '_type'    => 'json',
+            'numOfRows' => 100
+        ];
 
-    $fullUrl = $url . "?serviceKey=" . $apiKey . "&" . http_build_query($params);
+        $fullUrl = $url . "?serviceKey=" . $apiKey . "&" . http_build_query($params);
 
-    $ch = curl_init();
-    curl_setopt($ch, CURLOPT_URL, $fullUrl);
-    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-    curl_setopt($ch, CURLOPT_TIMEOUT, 10);
-    
-    $response = curl_exec($ch);
-    $status = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-    curl_close($ch);
+        $ch = curl_init();
+        curl_setopt($ch, CURLOPT_URL, $fullUrl);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_TIMEOUT, 10);
+        
+        $response = curl_exec($ch);
+        $status = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
 
-    if ($status === 200) {
-        $data = json_decode($response, true);
-        $items = $data['response']['body']['items']['item'] ?? [];
+        if ($status === 200) {
+            $data = json_decode($response, true);
+            $items = $data['response']['body']['items']['item'] ?? [];
 
-        if (!empty($items)) {
-            // 데이터가 1개일 때를 대비한 배열화 작업
-            if (!isset($items[0])) {
-                $items = [$items];
+            if (!empty($items)) {
+                if (!isset($items[0])) {
+                    $items = [$items];
+                }
+                $allHolidays = array_merge($allHolidays, $items);
+                echo "${year}년 ${m}월: " . count($items) . "개 수집 완료\n";
             }
-            $allHolidays = array_merge($allHolidays, $items);
-            echo "$m월: " . count($items) . "개의 휴일을 찾았습니다.\n";
         } else {
-            echo "$m월: 공휴일 없음\n";
+            echo "${year}년 ${m}월: API 호출 실패 (Status: $status)\n";
         }
-    } else {
-        echo "$m월: API 호출 실패 (Status: $status)\n";
     }
 }
 
@@ -62,10 +62,11 @@ for ($month = 1; $month <= 12; $month++) {
 $finalResult = [
     'status' => 'success',
     'last_updated' => date('Y-m-d H:i:s'),
-    'count' => count($allHolidays),
+    'description' => '작년, 올해, 내년(3개년) 공휴일 통합 데이터',
+    'total_count' => count($allHolidays),
     'data' => $allHolidays
 ];
 
-// JSON 파일로 저장
+// JSON 파일로 임시 저장
 file_put_contents('holidays.json', json_encode($finalResult, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT));
-echo "완료: holidays.json 파일이 생성되었습니다.\n";
+echo "\n=== 완료: 3개년 데이터가 holidays.json으로 통합되었습니다. ===\n";
