@@ -17,7 +17,16 @@
         #resultArea { margin-top: 20px; padding: 15px; background: #e9ecef; border-radius: 4px; display: none; }
         .result-item { display: flex; justify-content: space-between; margin-bottom: 8px; border-bottom: 1px dashed #ccc; padding-bottom: 5px; }
         .result-item:last-child { border-bottom: none; font-size: 1.2em; font-weight: bold; color: #d63384; margin-top: 10px; padding-top: 10px; border-top: 2px solid #ccc; }
-        code { color: #d63384; }
+        
+        /* 자세히 보기 스타일 */
+        .btn-detail { margin-top: 10px; background: #6c757d; }
+        .btn-detail:hover { background: #5a6268; }
+        .detail-container { margin-top: 15px; display: none; max-height: 250px; overflow-y: auto; border: 1px solid #ccc; border-radius: 4px; background: #fff; }
+        .detail-table { width: 100%; border-collapse: collapse; font-size: 0.9em; text-align: center; }
+        .detail-table th, .detail-table td { padding: 8px; border: 1px solid #ddd; }
+        .detail-table th { background: #f1f1f1; position: sticky; top: 0; }
+        .text-sunday, .text-holiday { color: #dc3545; font-weight: bold; }
+        .text-saturday { color: #007bff; font-weight: bold; }
     </style>
 </head>
 <body>
@@ -25,7 +34,8 @@
     <h1>📅 공휴일 & 영업일 계산기</h1>
     
     <div class="info-box">
-        <p>GitHub Actions 기반 3개년 공휴일 API 연동 중 🟢</p>
+        <p id="dynamicYearText" style="font-weight: bold; margin: 5px 0; color: #2c3e50;">계산 가능 연도 계산 중... 🟢</p>
+        <p style="margin: 5px 0; font-size: 0.85em; color: #666;">(한국천문연구원_특일 정보 활용)</p>
         <small>API 엔드포인트: <a href="holidays.json" target="_blank">/holidays.json</a></small>
     </div>
 
@@ -45,30 +55,50 @@
             <div class="result-item"><span>주말 (토/일):</span> <span id="weekendDays">0일</span></div>
             <div class="result-item"><span>법정 공휴일 (평일):</span> <span id="holidayDays">0일</span></div>
             <div class="result-item"><span>실제 영업일 (Working Days):</span> <span id="workingDays">0일</span></div>
+            
+            <button id="detailBtn" class="btn-detail" onclick="toggleDetails()">자세히 보기 👇</button>
+            <div id="detailArea" class="detail-container">
+                <table class="detail-table">
+                    <thead>
+                        <tr>
+                            <th>날짜</th>
+                            <th>구분</th>
+                            <th>내용</th>
+                        </tr>
+                    </thead>
+                    <tbody id="detailTableBody">
+                        </tbody>
+                </table>
+            </div>
         </div>
     </div>
 
     <script>
-        let holidayData = [];
+        let holidayMap = new Map();
+        let calculatedBreakdown = []; // 상세 내역 저장용 배열
 
-        // 1. 페이지 로드 시 holidays.json 데이터를 미리 가져옵니다.
         window.onload = async function() {
+            // 1. 해 바뀌면 자동 적용되는 연도 텍스트 구성 (작년 ~ 내후년)
+            const currentYear = new Date().getFullYear();
+            document.getElementById('dynamicYearText').innerText = `${currentYear - 1} ~ ${currentYear + 2}년 계산 가능 🟢`;
+
+            // 오늘 날짜를 기본값으로 세팅
+            document.getElementById('startDate').valueAsDate = new Date();
+
+            // 2. 공휴일 데이터 로드 및 Map 구조화
             try {
                 const response = await fetch('holidays.json');
                 const json = await response.json();
                 if (json.status === 'success') {
-                    // 공휴일 날짜(YYYYMMDD)만 추출하여 배열로 저장
-                    holidayData = json.data.map(item => String(item.locdate));
+                    json.data.forEach(item => {
+                        holidayMap.set(String(item.locdate), item.dateName);
+                    });
                 }
             } catch (error) {
                 console.error("공휴일 데이터를 불러오는데 실패했습니다.", error);
             }
-            
-            // 오늘 날짜를 기본값으로 세팅
-            document.getElementById('startDate').valueAsDate = new Date();
         };
 
-        // 2. 날짜를 YYYYMMDD 포맷으로 변환하는 헬퍼 함수
         function getYYYYMMDD(dateObj) {
             const y = dateObj.getFullYear();
             const m = String(dateObj.getMonth() + 1).padStart(2, '0');
@@ -76,7 +106,6 @@
             return `${y}${m}${d}`;
         }
 
-        // 3. 영업일 계산 핵심 로직
         function calculateWorkingDays() {
             const startInput = document.getElementById('startDate').value;
             const endInput = document.getElementById('endDate').value;
@@ -96,9 +125,9 @@
 
             let totalDays = 0;
             let weekendDays = 0;
-            let holidayDays = 0; // 주말과 겹치지 않는 공휴일 수
+            let holidayDays = 0;
+            calculatedBreakdown = []; // 초기화
 
-            // startDate부터 endDate까지 하루씩 증가시키며 검사
             let currentDate = new Date(startDate);
             
             while (currentDate <= endDate) {
@@ -106,28 +135,73 @@
                 
                 const dayOfWeek = currentDate.getDay(); // 0: 일요일, 6: 토요일
                 const dateString = getYYYYMMDD(currentDate);
-                const isHoliday = holidayData.includes(dateString);
+                const isHoliday = holidayMap.has(dateString);
+                const holidayName = holidayMap.get(dateString);
+                
+                const formattedDate = `${currentDate.getFullYear()}-${String(currentDate.getMonth()+1).padStart(2,'0')}-${String(currentDate.getDate()).padStart(2,'0')}`;
 
                 if (dayOfWeek === 0 || dayOfWeek === 6) {
-                    // 주말인 경우
                     weekendDays++;
+                    let typeStr = dayOfWeek === 6 ? '토요일' : '일요일';
+                    let classStr = dayOfWeek === 6 ? 'text-saturday' : 'text-sunday';
+                    let desc = isHoliday ? `주말 (${holidayName})` : '주말';
+                    
+                    calculatedBreakdown.push({ date: formattedDate, type: typeStr, desc: desc, className: classStr });
                 } else if (isHoliday) {
-                    // 평일인데 공휴일인 경우
                     holidayDays++;
+                    calculatedBreakdown.push({ date: formattedDate, type: '공휴일', desc: holidayName, className: 'text-holiday' });
                 }
 
-                // 하루 증가
                 currentDate.setDate(currentDate.getDate() + 1);
             }
 
             const workingDays = totalDays - weekendDays - holidayDays;
 
-            // 결과 화면에 출력
+            // 결과 바인딩
             document.getElementById('totalDays').innerText = `${totalDays}일`;
             document.getElementById('weekendDays').innerText = `${weekendDays}일`;
             document.getElementById('holidayDays').innerText = `${holidayDays}일`;
             document.getElementById('workingDays').innerText = `${workingDays}일`;
+            
+            // 상세 테이블 생성
+            renderDetails();
+
             document.getElementById('resultArea').style.display = 'block';
+            
+            // 결과가 새로 계산되면 상세보기는 일단 닫힘 상태로 처리
+            document.getElementById('detailArea').style.display = 'none';
+            document.getElementById('detailBtn').innerText = '자세히 보기 👇';
+        }
+
+        function renderDetails() {
+            const tbody = document.getElementById('detailTableBody');
+            tbody.innerHTML = '';
+
+            if (calculatedBreakdown.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="3" style="color:#999;">제외된 주말 및 휴일이 없습니다.</td></tr>';
+                return;
+            }
+
+            calculatedBreakdown.forEach(item => {
+                const row = `<tr>
+                    <td>${item.date}</td>
+                    <td class="${item.className}">${item.type}</td>
+                    <td>${item.desc}</td>
+                </tr>`;
+                tbody.innerHTML += row;
+            });
+        }
+
+        function toggleDetails() {
+            const area = document.getElementById('detailArea');
+            const btn = document.getElementById('detailBtn');
+            if (area.style.display === 'none') {
+                area.style.display = 'block';
+                btn.innerText = '접기 👆';
+            } else {
+                area.style.display = 'none';
+                btn.innerText = '자세히 보기 👇';
+            }
         }
     </script>
 </body>
