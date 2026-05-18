@@ -8,13 +8,13 @@ if (!$apiKey) {
     exit(1);
 }
 
-// 기준 연도 설정
+// 기준 연도 설정 (작년, 올해, 내년, 내후년 총 4개년)
 $currentYear = (int)date('Y');
-$yearsToFetch = [$currentYear - 1, $currentYear, $currentYear + 1]; // [작년, 올해, 내년]
+$yearsToFetch = [$currentYear - 1, $currentYear, $currentYear + 1, $currentYear + 2];
 
 $allHolidays = [];
 
-echo "=== 3개년 공휴일 데이터 수집 시작 ===\n";
+echo "=== 4개년 공휴일 데이터 수집 시작 ===\n";
 
 foreach ($yearsToFetch as $year) {
     echo "\n> [${year}년] 데이터 수집 중...\n";
@@ -62,11 +62,11 @@ foreach ($yearsToFetch as $year) {
 $finalResult = [
     'status' => 'success',
     'last_updated' => date('Y-m-d H:i:s'),
-    'description' => '작년, 올해, 내년(3개년) 공휴일 통합 데이터',
+    'description' => '작년, 올해, 내년, 내후년(4개년) 공휴일 통합 데이터',
     'total_count' => count($allHolidays),
     'data' => $allHolidays
 ];
 
 // JSON 파일로 임시 저장
 file_put_contents('holidays.json', json_encode($finalResult, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT));
-echo "\n=== 완료: 3개년 데이터가 holidays.json으로 통합되었습니다. ===\n";
+echo "\n=== 완료: 4개년 데이터가 holidays.json으로 통합되었습니다. ===\n";
