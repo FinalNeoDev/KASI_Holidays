@@ -27,6 +27,13 @@
         .detail-table th { background: #f1f1f1; position: sticky; top: 0; }
         .text-sunday, .text-holiday { color: #dc3545; font-weight: bold; }
         .text-saturday { color: #007bff; font-weight: bold; }
+
+        /* 네비게이션 링크 스타일 추가 */
+        .action-links { display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px; }
+        .action-links a { text-decoration: none; color: white; padding: 12px; border-radius: 4px; font-weight: bold; text-align: center; transition: opacity 0.2s; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .action-links a:hover { opacity: 0.9; }
+        .btn-brand { background: #6f42c1; } /* 보라색 (FinalNeoDev) */
+        .btn-nav { background: #28a745; }   /* 초록색 (페이지 이동) */
     </style>
 </head>
 <body>
@@ -38,8 +45,11 @@
         <p style="margin: 5px 0; font-size: 0.85em; color: #666;">(한국천문연구원_특일 정보 활용)</p>
         <small>API 엔드포인트: <a href="holidays.json" target="_blank">/holidays.json</a></small>
     </div>
-    <div style="text-align: center; margin-bottom: 20px;">
-        <a href="overtime.html" style="text-decoration: none; background: #28a745; color: white; padding: 8px 15px; border-radius: 4px; font-weight: bold;">💰 야근/휴일수당 계산기 가기 ➡️</a>
+
+    <!-- 링크 버튼 영역 (폼 바로 위로 이동) -->
+    <div class="action-links">
+        <a href="https://finalneodev.github.io" target="_blank" class="btn-brand">🌐 FinalNeoDev 더 알아보기</a>
+        <a href="overtime.html" class="btn-nav">💰 야근/휴일수당 계산기 가기 ➡️</a>
     </div>
 
     <div class="calc-box">
@@ -70,7 +80,7 @@
                         </tr>
                     </thead>
                     <tbody id="detailTableBody">
-                        </tbody>
+                    </tbody>
                 </table>
             </div>
         </div>
@@ -78,17 +88,13 @@
 
     <script>
         let holidayMap = new Map();
-        let calculatedBreakdown = []; // 상세 내역 저장용 배열
+        let calculatedBreakdown = [];
 
         window.onload = async function() {
-            // 1. 해 바뀌면 자동 적용되는 연도 텍스트 구성 (작년 ~ 내후년)
             const currentYear = new Date().getFullYear();
             document.getElementById('dynamicYearText').innerText = `${currentYear - 1} ~ ${currentYear + 2}년 계산 가능 🟢`;
-
-            // 오늘 날짜를 기본값으로 세팅
             document.getElementById('startDate').valueAsDate = new Date();
 
-            // 2. 공휴일 데이터 로드 및 Map 구조화
             try {
                 const response = await fetch('holidays.json');
                 const json = await response.json();
@@ -129,14 +135,14 @@
             let totalDays = 0;
             let weekendDays = 0;
             let holidayDays = 0;
-            calculatedBreakdown = []; // 초기화
+            calculatedBreakdown = [];
 
             let currentDate = new Date(startDate);
             
             while (currentDate <= endDate) {
                 totalDays++;
                 
-                const dayOfWeek = currentDate.getDay(); // 0: 일요일, 6: 토요일
+                const dayOfWeek = currentDate.getDay();
                 const dateString = getYYYYMMDD(currentDate);
                 const isHoliday = holidayMap.has(dateString);
                 const holidayName = holidayMap.get(dateString);
@@ -160,18 +166,14 @@
 
             const workingDays = totalDays - weekendDays - holidayDays;
 
-            // 결과 바인딩
             document.getElementById('totalDays').innerText = `${totalDays}일`;
             document.getElementById('weekendDays').innerText = `${weekendDays}일`;
             document.getElementById('holidayDays').innerText = `${holidayDays}일`;
             document.getElementById('workingDays').innerText = `${workingDays}일`;
             
-            // 상세 테이블 생성
             renderDetails();
-
             document.getElementById('resultArea').style.display = 'block';
             
-            // 결과가 새로 계산되면 상세보기는 일단 닫힘 상태로 처리
             document.getElementById('detailArea').style.display = 'none';
             document.getElementById('detailBtn').innerText = '자세히 보기 👇';
         }
