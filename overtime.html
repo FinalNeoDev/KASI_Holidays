@@ -7,9 +7,6 @@
     <style>
         body { font-family: 'Malgun Gothic', sans-serif; line-height: 1.6; padding: 30px; max-width: 800px; margin: 0 auto; color: #333; }
         h1 { text-align: center; color: #2c3e50; }
-        .nav-links { text-align: center; margin-bottom: 20px; }
-        .nav-links a { text-decoration: none; background: #2c3e50; color: white; padding: 8px 15px; border-radius: 4px; font-weight: bold; }
-        .nav-links a:hover { background: #1a252f; }
         .info-box { background: #f8f9fa; padding: 15px; border-radius: 8px; text-align: center; margin-bottom: 20px; border-left: 5px solid #007bff; }
         .calc-box { border: 1px solid #ddd; padding: 25px; border-radius: 8px; background: #fff; box-shadow: 0 4px 6px rgba(0,0,0,0.05); margin-bottom: 20px; }
         .form-group { margin-bottom: 15px; }
@@ -36,13 +33,16 @@
         #resultArea { margin-top: 20px; padding: 20px; background: #e9ecef; border-radius: 8px; display: none; }
         .result-item { display: flex; justify-content: space-between; margin-bottom: 10px; font-size: 1.1em; }
         .result-total { font-size: 1.5em; font-weight: bold; color: #d63384; border-top: 2px solid #ccc; padding-top: 15px; margin-top: 10px; }
+
+        /* 네비게이션 링크 스타일 추가 */
+        .action-links { display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px; }
+        .action-links a { text-decoration: none; color: white; padding: 12px; border-radius: 4px; font-weight: bold; text-align: center; transition: opacity 0.2s; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .action-links a:hover { opacity: 0.9; }
+        .btn-brand { background: #6f42c1; } /* 보라색 (FinalNeoDev) */
+        .btn-nav { background: #2c3e50; }   /* 남색 계열 (페이지 이동) */
     </style>
 </head>
 <body>
-
-    <div class="nav-links">
-        <a href="index.html">⬅️ 영업일 계산기로 돌아가기</a>
-    </div>
 
     <h1>💰 야근 및 휴일 가산수당 계산기</h1>
     
@@ -52,6 +52,12 @@
             평일 연장(1.5배), 휴일(8시간 내 1.5배 / 8시간 초과 2배), 야간(22시~06시, 0.5배 가산) 자동 적용<br>
             <small style="color:#666;">(본 계산기는 KASI 공휴일 데이터를 연동하며, 단순 참고용입니다.)</small>
         </p>
+    </div>
+
+    <!-- 링크 버튼 영역 (폼 바로 위로 이동) -->
+    <div class="action-links">
+        <a href="https://finalneodev.github.io" target="_blank" class="btn-brand">🌐 FinalNeoDev 더 알아보기</a>
+        <a href="index.html" class="btn-nav">⬅️ 영업일 계산기로 돌아가기</a>
     </div>
 
     <div class="calc-box">
@@ -123,15 +129,13 @@
 
     <script>
         let holidayMap = new Map();
-        let generatedDays = []; // 생성된 날짜 배열 저장
+        let generatedDays = []; 
 
         window.onload = async function() {
-            // 오늘 날짜 세팅
             document.getElementById('startDate').valueAsDate = new Date();
             document.getElementById('endDate').valueAsDate = new Date();
             updateWageInputStyle();
 
-            // 공휴일 데이터 로드
             try {
                 const response = await fetch('holidays.json');
                 const json = await response.json();
@@ -152,7 +156,6 @@
             return `${y}${m}${d}`;
         }
 
-        // 급여 형태 선택 변경 시 라벨 및 조건 텍스트 업데이트
         function updateWageInputStyle() {
             const wageType = document.getElementById('wageType').value;
             const wageLabel = document.getElementById('wageLabel');
@@ -179,25 +182,22 @@
             showCalculatedWage();
         }
 
-        // 입력된 금액을 기반으로 통상시급 계산
         function getCalculatedBaseWage() {
             const wageType = document.getElementById('wageType').value;
             const inputValue = parseFloat(document.getElementById('baseWage').value) || 0;
 
             if (wageType === 'hourly') return inputValue;
-            if (wageType === 'daily') return inputValue / 8;               // 하루 8시간 기준
-            if (wageType === 'monthly') return inputValue / 209;           // 주 40시간 기준 월 소정근로시간(주휴포함)
-            if (wageType === 'yearly') return (inputValue / 12) / 209;     // 연봉 나누기 12개월 후 209시간 나누기
+            if (wageType === 'daily') return inputValue / 8;               
+            if (wageType === 'monthly') return inputValue / 209;           
+            if (wageType === 'yearly') return (inputValue / 12) / 209;     
             return 0;
         }
 
-        // 실시간 환산 시급 화면 표시
         function showCalculatedWage() {
             const calcWage = getCalculatedBaseWage();
             document.getElementById('calcWageResult').innerText = Math.round(calcWage).toLocaleString();
         }
 
-        // 근무표 동적 생성
         function generateWorkTable() {
             const startInput = document.getElementById('startDate').value;
             const endInput = document.getElementById('endDate').value;
@@ -232,7 +232,7 @@
                 
                 let typeStr = '평일';
                 let classStr = '';
-                let isRestDay = false; // 휴일(주말+공휴일) 여부
+                let isRestDay = false; 
 
                 if (dayOfWeek === 0) { typeStr = '일요일'; classStr = 'text-sunday'; isRestDay = true; }
                 else if (dayOfWeek === 6) { typeStr = '토요일'; classStr = 'text-saturday'; isRestDay = true; }
@@ -260,9 +260,8 @@
             document.getElementById('resultArea').style.display = 'none';
         }
 
-        // 수당 계산 로직
         function calculateOvertimePay() {
-            const baseWage = getCalculatedBaseWage(); // 환산된 통상 시급 적용
+            const baseWage = getCalculatedBaseWage(); 
             if (baseWage <= 0) {
                 alert("정확한 금액을 입력해 주세요.");
                 return;
@@ -275,26 +274,21 @@
                 const workHours = parseFloat(document.getElementById(`work_${day.id}`).value) || 0;
                 const nightHours = parseFloat(document.getElementById(`night_${day.id}`).value) || 0;
 
-                // 1. 연장 및 휴일근로 수당 계산
                 if (day.isRestDay) {
-                    // 휴일: 8시간 이내는 1.5배, 8시간 초과는 2배
                     if (workHours <= 8) {
                         totalOvertimePay += workHours * baseWage * 1.5;
                     } else {
                         totalOvertimePay += (8 * baseWage * 1.5) + ((workHours - 8) * baseWage * 2.0);
                     }
                 } else {
-                    // 평일: 연장근로 시 무조건 1.5배
                     totalOvertimePay += workHours * baseWage * 1.5;
                 }
 
-                // 2. 야간근로 수당 (밤 10시~새벽 6시) -> 근로일 구분 없이 무조건 0.5배 가산
                 totalNightPay += nightHours * baseWage * 0.5;
             });
 
             const grandTotal = totalOvertimePay + totalNightPay;
 
-            // 결과 화면 표시 (원 단위 콤마 및 소수점 절사)
             document.getElementById('resOvertime').innerText = Math.floor(totalOvertimePay).toLocaleString() + '원';
             document.getElementById('resNight').innerText = Math.floor(totalNightPay).toLocaleString() + '원';
             document.getElementById('resTotal').innerText = Math.floor(grandTotal).toLocaleString() + '원';
