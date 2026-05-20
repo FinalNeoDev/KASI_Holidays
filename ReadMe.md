@@ -54,6 +54,8 @@ graph TD
 fetch('[https://finalneodev.github.io/Korea_Holidays/holidays.json](https://finalneodev.github.io/Korea_Holidays/holidays.json)')
   .then(response => response.json())
   .then(data => console.log(data));
+```
+
 **응답 형식 (JSON Sample)**
 ```json
 {
