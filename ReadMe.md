@@ -44,8 +44,9 @@ graph TD
     B -->|공휴일 파싱 및 노무 계산 로직 매핑| D[holidays.json]
     D -->|Auto Deploy| E[GitHub Pages]
     E -->|정적 서빙| F((Client Web/App))
+```
 
-    ## 💻 API 사용 방법 (Usage)
+## 💻 API 사용 방법 (Usage)
 
 ### 1. 공휴일 데이터 가져오기 (GET)
 별도의 API Key나 회원가입 없이 대한민국 최신 공휴일 배열 데이터를 정적으로 받아옵니다.
