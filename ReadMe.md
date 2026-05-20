@@ -15,7 +15,8 @@ GitHub Actions와 GitHub Pages를 활용하여 별도의 백엔드 유지비 없
 
 ## 🚀 Live Demo & API Endpoint
 
-* **영업일 및 수당 계산기 (Web UI)**: <https://finalneodev.github.io/Korea_Holidays/>
+* **공휴일 & 영업일 계산기 (Web UI)**: <https://finalneodev.github.io/Korea_Holidays/>
+* **야근 및 휴일 가산수당 계산기 (Web UI)**: <https://finalneodev.github.io/Korea_Holidays/overtime.html>
 * **공휴일 JSON API**: <https://finalneodev.github.io/Korea_Holidays/holidays.json>
 
 ---
@@ -45,6 +46,8 @@ graph TD
     D -->|Auto Deploy| E[GitHub Pages]
     E -->|정적 서빙| F((Client Web/App))
 ```
+
+---
 
 ## 💻 API 사용 방법 (Usage)
 
