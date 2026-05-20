@@ -14,7 +14,7 @@
         .calc-box { border: 1px solid #ddd; padding: 25px; border-radius: 8px; background: #fff; box-shadow: 0 4px 6px rgba(0,0,0,0.05); margin-bottom: 20px; }
         .form-group { margin-bottom: 15px; }
         label { display: block; margin-bottom: 5px; font-weight: bold; }
-        input[type="date"], input[type="number"] { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
+        input[type="date"], input[type="number"], select { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; font-size: 14px; }
         button { width: 100%; padding: 12px; background: #007bff; color: white; border: none; border-radius: 4px; font-size: 16px; cursor: pointer; font-weight: bold; margin-bottom: 10px; }
         button:hover { background: #0056b3; }
         .btn-success { background: #28a745; }
@@ -28,6 +28,10 @@
         .text-sunday, .text-holiday { color: #dc3545; font-weight: bold; }
         .text-saturday { color: #007bff; font-weight: bold; }
         
+        /* 예시 가이드 박스 */
+        .example-box { background: #f1f3f5; padding: 15px; border-radius: 6px; margin-bottom: 20px; font-size: 0.85em; border-left: 4px solid #6c757d; }
+        .example-box ul { margin: 5px 0 0 0; padding-left: 20px; line-height: 1.7; }
+
         /* 결과 영역 */
         #resultArea { margin-top: 20px; padding: 20px; background: #e9ecef; border-radius: 8px; display: none; }
         .result-item { display: flex; justify-content: space-between; margin-bottom: 10px; font-size: 1.1em; }
@@ -52,8 +56,21 @@
 
     <div class="calc-box">
         <div class="form-group">
-            <label for="baseWage">통상 시급 (원)</label>
-            <input type="number" id="baseWage" placeholder="예: 9860" value="9860">
+            <label for="wageType">급여 형태</label>
+            <select id="wageType" onchange="updateWageInputStyle()">
+                <option value="hourly">시급</option>
+                <option value="daily">일급 (세전)</option>
+                <option value="monthly">월급 (세전)</option>
+                <option value="yearly">연봉 (세전 / 퇴직금 제외)</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label id="wageLabel" for="baseWage">금액 입력 (원)</label>
+            <input type="number" id="baseWage" placeholder="예: 9860" value="9860" oninput="showCalculatedWage()">
+            <div style="font-size: 0.85em; color: #666; margin-top: 5px;">
+                💡 환산된 통상 시급: <span id="calcWageResult" style="font-weight: bold; color: #007bff;">9,860</span>원 
+                <small id="wageConditionText">(시급 기준)</small>
+            </div>
         </div>
         <div class="form-group">
             <label for="startDate">근무 시작일</label>
@@ -68,6 +85,17 @@
 
     <div class="calc-box" id="workTableArea" style="display: none;">
         <h3 style="margin-top:0;">시간 입력</h3>
+        
+        <div class="example-box">
+            <strong>💡 시간 입력 예시 가이드 (주 40시간 근무자 기준)</strong>
+            <ul>
+                <li><b>평일 18:00 ~ 22:00 근무</b> (연장 4시간) ➔ 연장/휴일: <span style="color:#007bff; font-weight:bold;">4</span> / 야간: <span style="color:#dc3545; font-weight:bold;">0</span></li>
+                <li><b>평일 19:00 ~ 24:00 근무</b> (연장 5시간, 22시이후 야간 2시간 중첩) ➔ 연장/휴일: <span style="color:#007bff; font-weight:bold;">5</span> / 야간: <span style="color:#dc3545; font-weight:bold;">2</span></li>
+                <li><b>주말 09:00 ~ 18:00 근무</b> (8시간 휴일근무, 휴게 1시간 제외) ➔ 연장/휴일: <span style="color:#007bff; font-weight:bold;">8</span> / 야간: <span style="color:#dc3545; font-weight:bold;">0</span></li>
+                <li><b>주말 20:00 ~ 익일 02:00 근무</b> (6시간 휴일근무, 22시이후 야간 4시간 중첩) ➔ 연장/휴일: <span style="color:#007bff; font-weight:bold;">6</span> / 야간: <span style="color:#dc3545; font-weight:bold;">4</span></li>
+            </ul>
+        </div>
+
         <p style="font-size:0.85em; color:#666; margin-bottom:15px;">해당 날짜에 근무한 <b>연장/휴일 근로시간</b>과 그 중 <b>심야(22~06시)에 겹친 시간</b>을 입력하세요.</p>
         <div style="overflow-x: auto;">
             <table class="work-table">
@@ -80,7 +108,7 @@
                     </tr>
                 </thead>
                 <tbody id="workTableBody">
-                    </tbody>
+                </tbody>
             </table>
         </div>
         <br>
@@ -101,6 +129,7 @@
             // 오늘 날짜 세팅
             document.getElementById('startDate').valueAsDate = new Date();
             document.getElementById('endDate').valueAsDate = new Date();
+            updateWageInputStyle();
 
             // 공휴일 데이터 로드
             try {
@@ -123,6 +152,51 @@
             return `${y}${m}${d}`;
         }
 
+        // 급여 형태 선택 변경 시 라벨 및 조건 텍스트 업데이트
+        function updateWageInputStyle() {
+            const wageType = document.getElementById('wageType').value;
+            const wageLabel = document.getElementById('wageLabel');
+            const baseWageInput = document.getElementById('baseWage');
+            const condText = document.getElementById('wageConditionText');
+
+            if (wageType === 'hourly') {
+                wageLabel.innerText = '통상 시급 (원)';
+                baseWageInput.placeholder = '예: 9860';
+                condText.innerText = '(입력 시급 그대로 적용)';
+            } else if (wageType === 'daily') {
+                wageLabel.innerText = '세전 일급 (원)';
+                baseWageInput.placeholder = '예: 80000';
+                condText.innerText = '(일 소정근로 8시간 기준)';
+            } else if (wageType === 'monthly') {
+                wageLabel.innerText = '세전 월급 (원)';
+                baseWageInput.placeholder = '예: 2500000';
+                condText.innerText = '(월 소정근로 209시간 기준)';
+            } else if (wageType === 'yearly') {
+                wageLabel.innerText = '세전 연봉 (원)';
+                baseWageInput.placeholder = '예: 32000000';
+                condText.innerText = '(연 12분할 후 월 209시간 기준)';
+            }
+            showCalculatedWage();
+        }
+
+        // 입력된 금액을 기반으로 통상시급 계산
+        function getCalculatedBaseWage() {
+            const wageType = document.getElementById('wageType').value;
+            const inputValue = parseFloat(document.getElementById('baseWage').value) || 0;
+
+            if (wageType === 'hourly') return inputValue;
+            if (wageType === 'daily') return inputValue / 8;               // 하루 8시간 기준
+            if (wageType === 'monthly') return inputValue / 209;           // 주 40시간 기준 월 소정근로시간(주휴포함)
+            if (wageType === 'yearly') return (inputValue / 12) / 209;     // 연봉 나누기 12개월 후 209시간 나누기
+            return 0;
+        }
+
+        // 실시간 환산 시급 화면 표시
+        function showCalculatedWage() {
+            const calcWage = getCalculatedBaseWage();
+            document.getElementById('calcWageResult').innerText = Math.round(calcWage).toLocaleString();
+        }
+
         // 근무표 동적 생성
         function generateWorkTable() {
             const startInput = document.getElementById('startDate').value;
@@ -130,7 +204,7 @@
             const wage = document.getElementById('baseWage').value;
 
             if (!startInput || !endInput || !wage) {
-                alert("시급과 날짜를 모두 입력해주세요.");
+                alert("급여액과 날짜를 모두 입력해주세요.");
                 return;
             }
 
@@ -188,7 +262,12 @@
 
         // 수당 계산 로직
         function calculateOvertimePay() {
-            const baseWage = parseFloat(document.getElementById('baseWage').value);
+            const baseWage = getCalculatedBaseWage(); // 환산된 통상 시급 적용
+            if (baseWage <= 0) {
+                alert("정확한 금액을 입력해 주세요.");
+                return;
+            }
+            
             let totalOvertimePay = 0;
             let totalNightPay = 0;
 
@@ -215,7 +294,7 @@
 
             const grandTotal = totalOvertimePay + totalNightPay;
 
-            // 결과 화면 표시 (원 단위 콤마)
+            // 결과 화면 표시 (원 단위 콤마 및 소수점 절사)
             document.getElementById('resOvertime').innerText = Math.floor(totalOvertimePay).toLocaleString() + '원';
             document.getElementById('resNight').innerText = Math.floor(totalNightPay).toLocaleString() + '원';
             document.getElementById('resTotal').innerText = Math.floor(grandTotal).toLocaleString() + '원';
